@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>СоюзТехноСтрой Posts</title>
+    <link rel="icon" href="icon.png" type="image/png">
+    <link href="https://fonts.googleapis.com/css2?family=Geologica:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    <style>
+        :root {
+            --bg-color: #1a1a1a;
+            --text-color: #ffffff;
+            --post-bg: #2a2a2a;
+            --post-pinned-bg: #202020;
+            --post-text-color: #d3d3d3;
+            --post-line-color: #808080;
+            --modal-bg: #2a2a2a;
+            --input-bg: #404040;
+            --button-bg: #808080;
+        }
+
+        .light-theme {
+            --bg-color: #f5f5f5;
+            --text-color: #333333;
+            --post-bg: #ffffff;
+            --post-pinned-bg: #f0f0f0;
+            --post-text-color: #555555;
+            --post-line-color: #cccccc;
+            --modal-bg: #ffffff;
+            --input-bg: #f0f0f0;
+            --button-bg: #dddddd;
+        }
+
+        body {
+            margin: 0;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: 'Geologica', sans-serif;
+            overflow-x: hidden;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        
+        .header-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            padding: 20px 0;
+        }
+        
+        .theme-toggle {
+            position: absolute;
+            right: 20px;
+            top: 10px;
+            background: none;
+            border: none;
+            color: var(--text-color);
+            cursor: pointer;
+            font-size: 32px;
+            display: flex;
+            align-items: center;
+            padding: 8px;
+            border-radius: 50%;
+            transition: transform 0.3s, background-color 0.3s;
+        }
+        
+        .theme-toggle:hover {
+            transform: scale(1.1);
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .header {
+            text-align: center;
+        }
+        
+        .logo {
+            font-size: 48px;
+            font-weight: 700;
+            color: var(--text-color);
+            margin: 0;
+        }
+        
+        .underline {
+            width: 500px;
+            height: 3px;
+            background-color: var(--post-line-color);
+            margin: 15px auto;
+            animation: expandLine 1s ease-out;
+        }
+        
+        .posts-container {
+            max-height: 80vh;
+            overflow-y: auto;
+            padding-right: 10px;
+        }
+        
+        .posts-container::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        .posts-container::-webkit-scrollbar-track {
+            background: var(--post-bg);
+        }
+        
+        .posts-container::-webkit-scrollbar-thumb {
+            background: var(--post-line-color);
+            border-radius: 4px;
+        }
+        
+        .post {
+            background-color: var(--post-bg);
+            width: 98%;
+            margin: 30px auto;
+            padding: 15px;
+            box-sizing: border-box;
+            position: relative;
+            border: 1px solid var(--post-line-color);
+            animation: fadeIn 0.5s ease-out;
+        }
+        
+        .post.pinned {
+            background-color: var(--post-pinned-bg);
+        }
+        
+        .post-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--text-color);
+            margin: 0 0 10px;
+            text-align: center;
+            position: relative;
+        }
+        
+        .post-title .material-icons {
+            font-size: 24px;
+            color: var(--text-color);
+            position: absolute;
+            left: -10px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+        
+        .post-line {
+            width: 100%;
+            height: 2px;
+            background-color: var(--post-line-color);
+            margin-bottom: 20px;
+        }
+        
+        .post-text {
+            font-size: 16px;
+            color: var(--post-text-color);
+            margin: 20px 0;
+            text-align: center;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            padding: 10px;
+        }
+        
+        .post-date {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            font-size: 12px;
+            color: var(--post-line-color);
+        }
+        
+        .post-pinned-label {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--text-color);
+        }
+        
+        .delete-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background-color: #ff4444;
+            color: #ffffff;
+            border: none;
+            padding: 5px 10px;
+            cursor: pointer;
+            font-size: 12px;
+            font-family: 'Geologica', sans-serif;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        
+        .modal-content {
+            background-color: var(--modal-bg);
+            padding: 20px;
+            border: 1px solid var(--post-line-color);
+            width: 300px;
+            text-align: center;
+            max-width: 80%;
+        }
+        
+        .modal-content input,
+        .modal-content button {
+            display: block;
+            width: 100%;
+            margin: 10px 0;
+            padding: 10px;
+            font-family: 'Geologica', sans-serif;
+        }
+        
+        .modal-content input {
+            background-color: var(--input-bg);
+            color: var(--text-color);
+            border: none;
+        }
+        
+        .modal-content button {
+            background-color: var(--button-bg);
+            color: var(--text-color);
+            border: none;
+            cursor: pointer;
+        }
+        
+        .create-post-form {
+            display: none;
+            background-color: var(--post-bg);
+            padding: 15px;
+            margin: 20px auto;
+            border: 1px solid var(--post-line-color);
+            max-width: 98%;
+        }
+        
+        .create-post-form input,
+        .create-post-form textarea {
+            display: block;
+            width: 100%;
+            margin: 10px 0;
+            padding: 10px;
+            background-color: var(--input-bg);
+            color: var(--text-color);
+            border: none;
+            font-family: 'Geologica', sans-serif;
+        }
+        
+        .create-post-form textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+        
+        .create-post-form label {
+            color: var(--text-color);
+            margin-bottom: 5px;
+            display: block;
+        }
+        
+        .create-post-form button {
+            background-color: var(--button-bg);
+            color: var(--text-color);
+            border: none;
+            padding: 10px;
+            cursor: pointer;
+            width: 100%;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+            
+            .logo {
+                font-size: 32px;
+            }
+            
+            .underline {
+                width: 80%;
+                max-width: 300px;
+            }
+            
+            .theme-toggle {
+                font-size: 28px;
+                right: 10px;
+                top: 5px;
+            }
+            
+            .post {
+                margin: 15px auto;
+                padding: 10px;
+            }
+            
+            .post-title {
+                font-size: 16px;
+            }
+            
+            .post-title .material-icons {
+                font-size: 20px;
+                left: -8px;
+            }
+            
+            .post-text {
+                font-size: 14px;
+                margin: 15px 0 0 0;
+            }
+            
+            .post-date, .post-pinned-label {
+                font-size: 10px;
+                bottom: 8px;
+            }
+            
+            .delete-btn {
+                padding: 4px 8px;
+                font-size: 10px;
+                top: 8px;
+                right: 8px;
+            }
+            
+            .modal-content {
+                width: 90%;
+                padding: 15px;
+            }
+            
+            .modal-content input,
+            .modal-content button {
+                padding: 8px;
+                font-size: 14px;
+            }
+            
+            .create-post-form {
+                padding: 10px;
+                margin: 15px auto;
+            }
+            
+            .create-post-form input,
+            .create-post-form textarea {
+                padding: 8px;
+                font-size: 14px;
+            }
+            
+            .create-post-form button {
+                padding: 8px;
+                font-size: 14px;
+            }
+            
+            .posts-container {
+                padding-right: 5px;
+            }
+            
+            .posts-container::-webkit-scrollbar {
+                width: 6px;
+            }
+        }
+        
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        @keyframes expandLine {
+            from {
+                width: 0;
+            }
+            to {
+                width: 80%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header-container">
+            <div class="header">
+                <h1 class="logo">СоюзТехноСтрой Posts</h1>
+                <div class="underline"></div>
+            </div>
+            <button class="theme-toggle" id="themeToggle">
+                <span class="material-icons">dark_mode</span>
+            </button>
+        </div>
+        
+        <div class="create-post-form" id="createPostForm">
+            <label for="postTitle">Заголовок поста</label>
+            <input type="text" id="postTitle" placeholder="Введите заголовок">
+            <label for="postText">Текст поста</label>
+            <textarea id="postText" placeholder="Введите текст"></textarea>
+            <label for="postPinned">Закрепить пост</label>
+            <input type="checkbox" id="postPinned">
+            <button id="createPostSubmit">Опубликовать</button>
+        </div>
+        
+        <div class="modal" id="adminModal">
+            <div class="modal-content">
+                <h2>Вход для администратора</h2>
+                <input type="password" id="adminPassword" placeholder="Введите пароль">
+                <button id="adminSubmit">Войти</button>
+            </div>
+        </div>
+        
+        <div class="posts-container" id="postsContainer"></div>
+    </div>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyAyZL35lXde5ywRO79EUx9_5299X8fS9mo",
+            authDomain: "stroy-posts.firebaseapp.com",
+            databaseURL: "https://stroy-posts-default-rtdb.firebaseio.com",
+            projectId: "stroy-posts",
+            storageBucket: "stroy-posts.firebasestorage.app",
+            messagingSenderId: "182028046082",
+            appId: "1:182028046082:web:6c6b954d9c484e6c81bc1b",
+            measurementId: "G-NK95BG0E9X"
+        };
+
+        const app = firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const savedTheme = localStorage.getItem('theme') || 'dark';
+            document.body.classList.toggle('light-theme', savedTheme === 'light');
+            updateThemeIcon(savedTheme);
+
+            const themeToggle = document.getElementById('themeToggle');
+            themeToggle.addEventListener('click', toggleTheme);
+
+            const urlParams = new URLSearchParams(window.location.search);
+            const isAdmin = urlParams.get('admin') === 'true';
+            let adminAuthenticated = false;
+
+            if (isAdmin) {
+                document.getElementById('adminModal').style.display = 'flex';
+            }
+
+            const loadPosts = () => {
+                const postsRef = db.ref('posts');
+                postsRef.on('value', (snapshot) => {
+                    const postsContainer = document.getElementById('postsContainer');
+                    postsContainer.innerHTML = '';
+                    const posts = [];
+                    
+                    snapshot.forEach((childSnapshot) => {
+                        posts.push({ id: childSnapshot.key, ...childSnapshot.val() });
+                    });
+
+                    posts.sort((a, b) => {
+                        if (a.pinned && !b.pinned) return -1;
+                        if (!a.pinned && b.pinned) return 1;
+                        return a.timestamp - b.timestamp;
+                    });
+
+                    posts.forEach((post) => {
+                        const postDiv = document.createElement('div');
+                        postDiv.className = post.pinned ? 'post pinned' : 'post';
+                        
+                        postDiv.innerHTML = `
+                            <h2 class="post-title">
+                                ${post.pinned ? '<span class="material-icons">push_pin</span>' : ''}
+                                ${post.title}
+                            </h2>
+                            <div class="post-line"></div>
+                            <p class="post-text">${post.text}</p>
+                            <span class="post-date">${post.date}</span>
+                            ${post.pinned ? '<span class="post-pinned-label">Закреплено</span>' : ''}
+                            ${isAdmin && adminAuthenticated ? `<button class="delete-btn" data-id="${post.id}">Удалить</button>` : ''}
+                        `;
+                        postsContainer.appendChild(postDiv);
+                    });
+
+                    if (isAdmin && adminAuthenticated) {
+                        document.querySelectorAll('.delete-btn').forEach(btn => {
+                            btn.addEventListener('click', (e) => {
+                                if (confirm('Удалить пост?')) {
+                                    db.ref(`posts/${e.target.dataset.id}`).remove();
+                                }
+                            });
+                        });
+                    }
+                });
+            };
+
+            document.getElementById('adminSubmit').addEventListener('click', () => {
+                const passwordInput = document.getElementById('adminPassword').value;
+                db.ref('password').once('value').then((snapshot) => {
+                    const correctPassword = snapshot.val();
+                    if (passwordInput === correctPassword) {
+                        adminAuthenticated = true;
+                        document.getElementById('adminModal').style.display = 'none';
+                        document.getElementById('createPostForm').style.display = 'block';
+                        loadPosts();
+                    } else {
+                        alert('Неверный пароль');
+                    }
+                });
+            });
+
+            document.getElementById('createPostSubmit').addEventListener('click', () => {
+                const title = document.getElementById('postTitle').value;
+                const text = document.getElementById('postText').value;
+                const pinned = document.getElementById('postPinned').checked;
+                const date = new Date().toLocaleString('ru-RU', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+                const timestamp = Date.now();
+
+                if (title && text) {
+                    db.ref('posts').push({
+                        title,
+                        text,
+                        date,
+                        pinned,
+                        timestamp
+                    }).then(() => {
+                        document.getElementById('postTitle').value = '';
+                        document.getElementById('postText').value = '';
+                        document.getElementById('postPinned').checked = false;
+                    });
+                } else {
+                    alert('Заполните все поля');
+                }
+            });
+
+            loadPosts();
+
+            function toggleTheme() {
+                const isLight = document.body.classList.toggle('light-theme');
+                const theme = isLight ? 'light' : 'dark';
+                localStorage.setItem('theme', theme);
+                updateThemeIcon(theme);
+            }
+
+            function updateThemeIcon(theme) {
+                const icon = document.querySelector('#themeToggle .material-icons');
+                icon.textContent = theme === 'light' ? 'dark_mode' : 'light_mode';
+            }
+        });
+    </script>
+</body>
+</html>
